@@ -1,15 +1,5 @@
 'use client'
 
-/**
- * vault-context.tsx  (updated)
- *
- * Key change: the encrypted vault is stored in Google Drive (appDataFolder)
- * instead of localStorage.  The encryption itself is unchanged (AES-256-GCM).
- *
- * The context now depends on GoogleAuthContext for the access token.
- * All vault operations are no-ops when the user is not signed in.
- */
-
 import {
   createContext,
   useContext,
@@ -26,7 +16,7 @@ import { loadVaultFromDrive, saveVaultToDrive, deleteVaultFromDrive } from './go
 
 const AUTH_CHECK_INTERVAL = 10_000
 
-// ─── context type (unchanged public surface) ─────────────────────────────────
+// ─── context type ─────────────────────────────────────────────────────────────
 
 interface VaultContextType {
   authState: AuthState
@@ -54,17 +44,38 @@ interface VaultContextType {
   deleteVault: () => Promise<void>
 }
 
-const VaultContext = createContext<VaultContextType | null>(null)
+// Safe SSR default — all actions are no-ops until the client hydrates
+const DEFAULT_CTX: VaultContextType = {
+  authState: { isAuthenticated: false, isSetup: false, hasTotpEnabled: false, lastActivity: 0 },
+  isLoading: true,
+  error: null,
+  setupVault: async () => null,
+  unlock: async () => false,
+  lock: () => {},
+  changePassword: async () => false,
+  enableTotp: async () => null,
+  disableTotp: async () => false,
+  keys: [],
+  addKey: async () => {},
+  updateKey: async () => {},
+  deleteKey: async () => {},
+  settings: DEFAULT_SETTINGS,
+  updateSettings: async () => {},
+  exportVault: () => null,
+  importVault: async () => false,
+  deleteVault: async () => {},
+}
+
+const VaultContext = createContext<VaultContextType>(DEFAULT_CTX)
 
 export function useVault() {
-  const ctx = useContext(VaultContext)
-  if (!ctx) throw new Error('useVault must be used within a VaultProvider')
-  return ctx
+  return useContext(VaultContext)
 }
 
 // ─── provider ────────────────────────────────────────────────────────────────
 
 export function VaultProvider({ children }: { children: ReactNode }) {
+  // accessToken is null on the server and until the user signs in
   const { accessToken } = useGoogleAuth()
 
   const [authState, setAuthState] = useState<AuthState>({
@@ -76,13 +87,13 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const [vaultData, setVaultData] = useState<VaultData | null>(null)
   const [encryptedVault, setEncryptedVault] = useState<EncryptedVault | null>(null)
   const [currentPassword, setCurrentPassword] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // ── load vault from Drive whenever the user signs in ──────────────────────
+  // ── load vault from Drive when user signs in ──────────────────────────────
   useEffect(() => {
     if (!accessToken) {
-      // User signed out — reset everything
+      // Signed out — reset
       setEncryptedVault(null)
       setVaultData(null)
       setCurrentPassword(null)
@@ -100,7 +111,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         if (raw) {
           const vault = JSON.parse(raw) as EncryptedVault
           setEncryptedVault(vault)
-          setAuthState((prev) => ({ ...prev, isSetup: true }))
+          setAuthState((p) => ({ ...p, isSetup: true }))
         }
       })
       .catch(() => {
@@ -116,13 +127,11 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   // ── auto-lock on inactivity ───────────────────────────────────────────────
   useEffect(() => {
     if (!authState.isAuthenticated || !vaultData) return
-
     const check = () => {
       const idle = Date.now() - authState.lastActivity
       const limit = (vaultData.settings.autoLockMinutes ?? 5) * 60_000
       if (idle > limit) lock()
     }
-
     const id = setInterval(check, AUTH_CHECK_INTERVAL)
     return () => clearInterval(id)
   }, [authState.isAuthenticated, authState.lastActivity, vaultData])
@@ -141,9 +150,9 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     }
   }, [authState.isAuthenticated])
 
-  // ── save to Drive ─────────────────────────────────────────────────────────
+  // ── internal save helper ──────────────────────────────────────────────────
   const saveVault = useCallback(async (data: VaultData, password: string) => {
-    if (!accessToken) throw new Error('Not signed in')
+    if (!accessToken) throw new Error('Not signed in to Google')
     const encrypted = await encryptVault(data, password)
     await saveVaultToDrive(accessToken, JSON.stringify(encrypted))
     setEncryptedVault(encrypted)
@@ -170,10 +179,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const unlock = useCallback(async (password: string, totpCode?: string): Promise<boolean> => {
     setError(null)
     if (!encryptedVault) { setError('No vault found'); return false }
-
     try {
       const data = await decryptVault(encryptedVault, password)
-
       if (data.totpSecret && data.settings.requireTotpOnUnlock) {
         if (!totpCode) {
           setAuthState((p) => ({ ...p, hasTotpEnabled: true }))
@@ -185,7 +192,6 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           return false
         }
       }
-
       setVaultData(data)
       setCurrentPassword(password)
       setAuthState({ isAuthenticated: true, isSetup: true, hasTotpEnabled: !!data.totpSecret, lastActivity: Date.now() })
@@ -316,9 +322,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   }, [accessToken])
 
   const deleteVault = useCallback(async () => {
-    if (accessToken) {
-      await deleteVaultFromDrive(accessToken).catch(() => {})
-    }
+    if (accessToken) await deleteVaultFromDrive(accessToken).catch(() => {})
     setEncryptedVault(null)
     setVaultData(null)
     setCurrentPassword(null)
