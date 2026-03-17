@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
-import dynamic from 'next/dynamic'
+import { ClientProviders } from '@/components/client-providers'
 import './globals.css'
 
 const geist = Geist({
@@ -13,17 +13,11 @@ const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
 })
 
-// Client-only — never runs on the server so sessionStorage / window.google
-// are never touched during static prerendering.
-const Providers = dynamic(
-  () => import('@/components/providers').then((m) => m.Providers),
-  { ssr: false }
-)
-
 export const metadata: Metadata = {
   title: 'CryptoVault - Secure Private Key Storage',
   description:
     'Securely store your private keys, wallet addresses, and seed phrases with military-grade AES-256 encryption. All data stays on your device.',
+  generator: 'v0.app',
   icons: {
     icon: [
       { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },
@@ -49,9 +43,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${geist.variable} ${geistMono.variable} font-sans antialiased`}>
-        <Providers>
+        <ClientProviders>
           {children}
-        </Providers>
+        </ClientProviders>
         <Analytics />
       </body>
     </html>
