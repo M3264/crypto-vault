@@ -1,16 +1,25 @@
 'use client'
 
-import { useVault, VaultProvider } from '@/lib/vault-context'
+import { useVault } from '@/lib/vault-context'
+import { useGoogleAuth } from '@/lib/google-auth-context'
 import { SetupForm } from '@/components/auth/setup-form'
 import { UnlockForm } from '@/components/auth/unlock-form'
 import { Dashboard } from '@/components/vault/dashboard'
+import { GoogleSignInScreen } from '@/components/auth/google-sign-in-screen'
 import { Spinner } from '@/components/ui/spinner'
 import { Shield, Lock, Key, Fingerprint } from 'lucide-react'
 
 function VaultApp() {
-  const { authState, isLoading } = useVault()
+  const { authState, isLoading: vaultLoading } = useVault()
+  const { user, isLoading: authLoading } = useGoogleAuth()
 
-  if (isLoading) {
+  // 1. Not signed into Google → full-page sign-in gate
+  if (!user) {
+    return <GoogleSignInScreen />
+  }
+
+  // 2. Loading vault from Drive
+  if (authLoading || vaultLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -21,15 +30,18 @@ function VaultApp() {
     )
   }
 
+  // 3. Vault unlocked → dashboard
   if (authState.isAuthenticated) {
     return <Dashboard />
   }
 
+  // 4. Signed in but vault locked/not set up → setup or unlock form
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 lg:py-16">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-          {/* Left side - Branding */}
+
+          {/* Left side — Branding */}
           <div className="hidden lg:block">
             <div className="max-w-md">
               <div className="flex items-center gap-3 mb-8">
@@ -44,8 +56,8 @@ function VaultApp() {
               </h1>
 
               <p className="text-lg text-muted-foreground mb-8">
-                Keep your private keys, wallet addresses, and seed phrases safe with military-grade encryption. 
-                All data stays on your device.
+                Keep your private keys, wallet addresses, and seed phrases safe with
+                military-grade encryption. Your vault is synced to your own Google Drive.
               </p>
 
               <div className="space-y-4">
@@ -56,8 +68,8 @@ function VaultApp() {
                 />
                 <Feature
                   icon={<Key className="w-5 h-5" />}
-                  title="Local-First Storage"
-                  description="Private keys never leave your device - no servers, no cloud, no risk"
+                  title="Your Google Drive, Your Data"
+                  description="The encrypted vault lives in your own Drive — we never touch your keys"
                 />
                 <Feature
                   icon={<Fingerprint className="w-5 h-5" />}
@@ -68,7 +80,7 @@ function VaultApp() {
             </div>
           </div>
 
-          {/* Right side - Auth Forms */}
+          {/* Right side — Auth forms */}
           <div className="flex justify-center lg:justify-end">
             <div className="w-full max-w-md">
               {/* Mobile branding */}
@@ -88,11 +100,12 @@ function VaultApp() {
               </div>
 
               <p className="text-xs text-center text-muted-foreground mt-6">
-                Your vault is encrypted locally using PBKDF2 key derivation with 600,000 iterations 
-                and AES-256-GCM encryption. Private keys never leave your device.
+                Your vault is encrypted locally using PBKDF2 key derivation with 600,000 iterations
+                and AES-256-GCM encryption. The encrypted file is stored in your own Google Drive.
               </p>
             </div>
           </div>
+
         </div>
       </div>
     </div>
@@ -102,7 +115,7 @@ function VaultApp() {
 function Feature({
   icon,
   title,
-  description
+  description,
 }: {
   icon: React.ReactNode
   title: string
@@ -122,9 +135,5 @@ function Feature({
 }
 
 export default function Page() {
-  return (
-    <VaultProvider>
-      <VaultApp />
-    </VaultProvider>
-  )
+  return <VaultApp />
 }
