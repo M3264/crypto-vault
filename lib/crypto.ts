@@ -1,11 +1,10 @@
 import type { EncryptedVault, VaultData } from './types'
 
 const VAULT_VERSION = 1
-const PBKDF2_ITERATIONS = 600000 // OWASP recommended minimum
+const PBKDF2_ITERATIONS = 600000
 const SALT_LENGTH = 32
 const IV_LENGTH = 12
 
-// Convert ArrayBuffer to Base64
 function bufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)
   let binary = ''
@@ -14,8 +13,6 @@ function bufferToBase64(buffer: ArrayBuffer): string {
   }
   return btoa(binary)
 }
-
-// Convert Base64 to ArrayBuffer
 function base64ToBuffer(base64: string): ArrayBuffer {
   const binary = atob(base64)
   const bytes = new Uint8Array(binary.length)
@@ -24,18 +21,13 @@ function base64ToBuffer(base64: string): ArrayBuffer {
   }
   return bytes.buffer
 }
-
-// Generate cryptographically secure random bytes
 function generateRandomBytes(length: number): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(length))
 }
-
-// Derive encryption key from password using PBKDF2
 async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
   const encoder = new TextEncoder()
   const passwordBuffer = encoder.encode(password)
-  
-  // Import password as key material
+
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
     passwordBuffer,
@@ -44,7 +36,6 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey>
     ['deriveKey']
   )
   
-  // Derive AES-GCM key using PBKDF2
   return crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
@@ -58,8 +49,6 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey>
     ['encrypt', 'decrypt']
   )
 }
-
-// Generate SHA-256 checksum
 async function generateChecksum(data: string): Promise<string> {
   const encoder = new TextEncoder()
   const dataBuffer = encoder.encode(data)
@@ -67,7 +56,6 @@ async function generateChecksum(data: string): Promise<string> {
   return bufferToBase64(hashBuffer)
 }
 
-// Encrypt vault data
 export async function encryptVault(
   data: VaultData,
   password: string
@@ -80,7 +68,6 @@ export async function encryptVault(
   const jsonData = JSON.stringify(data)
   const dataBuffer = encoder.encode(jsonData)
   
-  // Encrypt using AES-GCM
   const encryptedBuffer = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv: iv },
     key,
@@ -99,7 +86,6 @@ export async function encryptVault(
   }
 }
 
-// Decrypt vault data
 export async function decryptVault(
   vault: EncryptedVault,
   password: string
@@ -111,7 +97,6 @@ export async function decryptVault(
   const key = await deriveKey(password, salt)
   
   try {
-    // Decrypt using AES-GCM
     const decryptedBuffer = await crypto.subtle.decrypt(
       { name: 'AES-GCM', iv: iv },
       key,
@@ -121,7 +106,6 @@ export async function decryptVault(
     const decoder = new TextDecoder()
     const jsonData = decoder.decode(decryptedBuffer)
     
-    // Verify checksum
     const checksum = await generateChecksum(jsonData)
     if (checksum !== vault.checksum) {
       throw new Error('Data integrity check failed')
@@ -133,7 +117,7 @@ export async function decryptVault(
   }
 }
 
-// Verify password without full decryption
+
 export async function verifyPassword(
   vault: EncryptedVault,
   password: string
@@ -146,7 +130,6 @@ export async function verifyPassword(
   }
 }
 
-// Generate a secure random ID
 export function generateId(): string {
   const bytes = generateRandomBytes(16)
   return Array.from(bytes)
@@ -154,17 +137,13 @@ export function generateId(): string {
     .join('')
 }
 
-// TOTP implementation for 2FA
 const TOTP_PERIOD = 30
 const TOTP_DIGITS = 6
 
-// Generate a random TOTP secret (Base32 encoded)
 export function generateTotpSecret(): string {
   const bytes = generateRandomBytes(20)
   return base32Encode(bytes)
 }
-
-// Base32 encoding
 function base32Encode(buffer: Uint8Array): string {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
   let result = ''
@@ -188,7 +167,6 @@ function base32Encode(buffer: Uint8Array): string {
   return result
 }
 
-// Base32 decoding
 function base32Decode(str: string): Uint8Array {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
   const cleanStr = str.toUpperCase().replace(/[^A-Z2-7]/g, '')
@@ -213,17 +191,15 @@ function base32Decode(str: string): Uint8Array {
   return new Uint8Array(output)
 }
 
-// Generate TOTP code
 export async function generateTotp(secret: string, time?: number): Promise<string> {
   const counter = Math.floor((time || Date.now()) / 1000 / TOTP_PERIOD)
   const secretBytes = base32Decode(secret)
   
-  // Convert counter to 8-byte buffer (big-endian)
   const counterBuffer = new ArrayBuffer(8)
   const counterView = new DataView(counterBuffer)
   counterView.setBigUint64(0, BigInt(counter), false)
   
-  // Import secret as HMAC key
+  
   const key = await crypto.subtle.importKey(
     'raw',
     secretBytes,
@@ -232,11 +208,9 @@ export async function generateTotp(secret: string, time?: number): Promise<strin
     ['sign']
   )
   
-  // Generate HMAC
   const hmac = await crypto.subtle.sign('HMAC', key, counterBuffer)
   const hmacBytes = new Uint8Array(hmac)
   
-  // Dynamic truncation
   const offset = hmacBytes[hmacBytes.length - 1] & 0x0f
   const code = (
     ((hmacBytes[offset] & 0x7f) << 24) |
@@ -248,11 +222,9 @@ export async function generateTotp(secret: string, time?: number): Promise<strin
   return code.toString().padStart(TOTP_DIGITS, '0')
 }
 
-// Verify TOTP code (allows 1 period drift)
 export async function verifyTotp(secret: string, code: string): Promise<boolean> {
   const now = Date.now()
   
-  // Check current and adjacent time periods
   for (const offset of [0, -TOTP_PERIOD * 1000, TOTP_PERIOD * 1000]) {
     const expected = await generateTotp(secret, now + offset)
     if (expected === code) {
@@ -263,7 +235,6 @@ export async function verifyTotp(secret: string, code: string): Promise<boolean>
   return false
 }
 
-// Generate TOTP URI for QR codes
 export function getTotpUri(secret: string, accountName: string, issuer: string = 'CryptoVault'): string {
   const encodedAccount = encodeURIComponent(accountName)
   const encodedIssuer = encodeURIComponent(issuer)

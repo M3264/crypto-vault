@@ -40,7 +40,7 @@ export function useGoogleAuth() {
   return useContext(GoogleAuthContext)
 }
 
-// ─── GIS loader ──────────────────────────────────────────────────────────────
+// ─── GIS loader ──
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ''
 const SCOPES = [
@@ -72,8 +72,7 @@ function loadGisScript(): Promise<void> {
   })
 }
 
-// ─── session helpers ─────────────────────────────────────────────────────────
-
+// ─── session helpers ──
 const SK_TOKEN = 'gauth_token'
 const SK_USER = 'gauth_user'
 const SK_EXPIRY = 'gauth_expiry'
@@ -105,8 +104,7 @@ function clearSession() {
   } catch {}
 }
 
-// ─── provider ────────────────────────────────────────────────────────────────
-
+// ─── provider ──
 export function GoogleAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<GoogleUser | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(null)

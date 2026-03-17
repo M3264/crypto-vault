@@ -120,7 +120,7 @@ export function UnlockForm({ onUnlock }: UnlockFormProps) {
             Your vault is encrypted locally with AES-256-GCM encryption
           </p>
         </div>
-      </form>
+      </form>            
     </div>
   )
 }

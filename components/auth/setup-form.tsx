@@ -1,12 +1,5 @@
 'use client'
 
-/**
- * setup-form.tsx  (updated)
- *
- * Now shows the signed-in Google user at the top and a sign-out option.
- * The vault setup flow itself is unchanged.
- */
-
 import { useState } from 'react'
 import { useVault } from '@/lib/vault-context'
 import { useGoogleAuth } from '@/lib/google-auth-context'

@@ -210,7 +210,7 @@ export function KeyCard({ entry, onEdit, onDelete }: KeyCardProps) {
         </div>
       </div>
 
-      {/* ── View Dialog ─────────────────────────────────────────────────────── */}
+      {/* ─ View Dialog ─ */}
       <ViewDialog
         entry={entry}
         open={showViewDialog}
@@ -218,7 +218,7 @@ export function KeyCard({ entry, onEdit, onDelete }: KeyCardProps) {
         onEdit={() => { setShowViewDialog(false); onEdit() }}
       />
 
-      {/* ── Delete Confirm ───────────────────────────────────────────────────── */}
+      {/* ─ Delete Confirm ─ */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -242,7 +242,7 @@ export function KeyCard({ entry, onEdit, onDelete }: KeyCardProps) {
   )
 }
 
-// ── View Dialog ──────────────────────────────────────────────────────────────
+// ── View Dialog ──
 
 function ViewDialog({
   entry,
@@ -275,8 +275,6 @@ function ViewDialog({
       minute: '2-digit',
     })
   }
-
-  // Reset reveal state when dialog closes
   function handleOpenChange(open: boolean) {
     if (!open) { setRevealed(false); onClose() }
   }

@@ -16,8 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'CryptoVault - Secure Private Key Storage',
   description:
-    'Securely store your private keys, wallet addresses, and seed phrases with military-grade AES-256 encryption. All data stays on your device.',
-  generator: 'v0.app',
+    'Securely store your private keys, wallet addresses, and seed phrases with AES-256 encryption. All data stays on your Google drive account.',
   icons: {
     icon: [
       { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },

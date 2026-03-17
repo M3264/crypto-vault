@@ -12,13 +12,9 @@ import { Shield, Lock, Key, Fingerprint } from 'lucide-react'
 function VaultApp() {
   const { authState, isLoading: vaultLoading } = useVault()
   const { user, isLoading: authLoading } = useGoogleAuth()
-
-  // 1. Not signed into Google → full-page sign-in gate
   if (!user) {
     return <GoogleSignInScreen />
   }
-
-  // 2. Loading vault from Drive
   if (authLoading || vaultLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -29,13 +25,9 @@ function VaultApp() {
       </div>
     )
   }
-
-  // 3. Vault unlocked → dashboard
   if (authState.isAuthenticated) {
     return <Dashboard />
   }
-
-  // 4. Signed in but vault locked/not set up → setup or unlock form
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 lg:py-16">
@@ -56,8 +48,7 @@ function VaultApp() {
               </h1>
 
               <p className="text-lg text-muted-foreground mb-8">
-                Keep your private keys, wallet addresses, and seed phrases safe with
-                military-grade encryption. Your vault is synced to your own Google Drive.
+                Keep your private keys, wallet addresses, and seed phrases safe with encryption. Your vault is synced to your own Google Drive.
               </p>
 
               <div className="space-y-4">

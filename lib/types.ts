@@ -2,7 +2,7 @@ export interface KeyEntry {
   id: string
   label: string
   type: 'private_key' | 'public_key' | 'address' | 'seed_phrase' | 'api_key' | 'other'
-  value: string // This will be encrypted
+  value: string
   network?: string
   notes?: string
   createdAt: string
@@ -12,16 +12,16 @@ export interface KeyEntry {
 
 export interface EncryptedVault {
   version: number
-  salt: string // Base64 encoded salt for PBKDF2
-  iv: string // Base64 encoded IV for AES-GCM
-  data: string // Base64 encoded encrypted data
-  checksum: string // For integrity verification
+  salt: string 
+  iv: string 
+  data: string 
+  checksum: string 
 }
 
 export interface VaultData {
   keys: KeyEntry[]
   settings: VaultSettings
-  totpSecret?: string // For 2FA
+  totpSecret?: string 
 }
 
 export interface VaultSettings {

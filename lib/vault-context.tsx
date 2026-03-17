@@ -16,8 +16,7 @@ import { loadVaultFromDrive, saveVaultToDrive, deleteVaultFromDrive } from './go
 
 const AUTH_CHECK_INTERVAL = 10_000
 
-// ─── context type ─────────────────────────────────────────────────────────────
-
+// ─── context type ───
 interface VaultContextType {
   authState: AuthState
   isLoading: boolean
@@ -44,7 +43,6 @@ interface VaultContextType {
   deleteVault: () => Promise<void>
 }
 
-// Safe SSR default — all actions are no-ops until the client hydrates
 const DEFAULT_CTX: VaultContextType = {
   authState: { isAuthenticated: false, isSetup: false, hasTotpEnabled: false, lastActivity: 0 },
   isLoading: true,
@@ -72,10 +70,8 @@ export function useVault() {
   return useContext(VaultContext)
 }
 
-// ─── provider ────────────────────────────────────────────────────────────────
-
+// ─── provider ───
 export function VaultProvider({ children }: { children: ReactNode }) {
-  // accessToken is null on the server and until the user signs in
   const { accessToken } = useGoogleAuth()
 
   const [authState, setAuthState] = useState<AuthState>({
@@ -90,10 +86,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // ── load vault from Drive when user signs in ──────────────────────────────
   useEffect(() => {
     if (!accessToken) {
-      // Signed out — reset
       setEncryptedVault(null)
       setVaultData(null)
       setCurrentPassword(null)
@@ -124,19 +118,19 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true }
   }, [accessToken])
 
-  // ── auto-lock on inactivity ───────────────────────────────────────────────
+  // ── auto-lock on inactivity ──
   useEffect(() => {
     if (!authState.isAuthenticated || !vaultData) return
     const check = () => {
       const idle = Date.now() - authState.lastActivity
-      const limit = (vaultData.settings.autoLockMinutes ?? 5) * 60_000
+      const limit = (vaultData.settings.autoLockMinutes ?? 5) * 600_000
       if (idle > limit) lock()
     }
     const id = setInterval(check, AUTH_CHECK_INTERVAL)
     return () => clearInterval(id)
   }, [authState.isAuthenticated, authState.lastActivity, vaultData])
 
-  // ── track user activity ───────────────────────────────────────────────────
+  // ── track user activity ──
   useEffect(() => {
     if (!authState.isAuthenticated) return
     const bump = () => setAuthState((p) => ({ ...p, lastActivity: Date.now() }))
@@ -150,7 +144,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     }
   }, [authState.isAuthenticated])
 
-  // ── internal save helper ──────────────────────────────────────────────────
+  // ── internal save helper ──
   const saveVault = useCallback(async (data: VaultData, password: string) => {
     if (!accessToken) throw new Error('Not signed in to Google')
     const encrypted = await encryptVault(data, password)
@@ -158,8 +152,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     setEncryptedVault(encrypted)
   }, [accessToken])
 
-  // ── auth actions ──────────────────────────────────────────────────────────
-
+  // ── auth actions ──
   const setupVault = useCallback(async (password: string, enableTotp = false): Promise<string | null> => {
     setError(null)
     try {
@@ -256,8 +249,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     }
   }, [vaultData, currentPassword, saveVault])
 
-  // ── key management ────────────────────────────────────────────────────────
-
+  // ── key management ──
   const addKey = useCallback(async (key: Omit<KeyEntry, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!vaultData || !currentPassword) return
     const now = new Date().toISOString()
@@ -287,8 +279,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     setAuthState((p) => ({ ...p, lastActivity: Date.now() }))
   }, [vaultData, currentPassword, saveVault])
 
-  // ── settings ──────────────────────────────────────────────────────────────
-
+  // ── settings ──
   const updateSettings = useCallback(async (updates: Partial<VaultSettings>) => {
     if (!vaultData || !currentPassword) return
     const updated: VaultData = { ...vaultData, settings: { ...vaultData.settings, ...updates } }
@@ -296,8 +287,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     setVaultData(updated)
   }, [vaultData, currentPassword, saveVault])
 
-  // ── export / import / delete ──────────────────────────────────────────────
-
+  // ── export / import / delete ──
   const exportVault = useCallback((): string | null => {
     if (!encryptedVault) return null
     return JSON.stringify(encryptedVault)
