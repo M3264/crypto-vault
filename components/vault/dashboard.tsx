@@ -49,7 +49,7 @@ import type { KeyEntry } from '@/lib/types'
 import { KEY_TYPES } from '@/lib/types'
 
 export function Dashboard() {
-  const { keys, lock, exportVault, importVault, deleteKey, updateKey } = useVault()
+  const { keys, lock, exportVault, importVault, deleteKey } = useVault()
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [isAddingKey, setIsAddingKey] = useState(false)
@@ -63,9 +63,7 @@ export function Dashboard() {
         key.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         key.network?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         key.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-      
       const matchesType = typeFilter === 'all' || key.type === typeFilter
-      
       return matchesSearch && matchesType
     })
   }, [keys, searchQuery, typeFilter])
@@ -94,9 +92,7 @@ export function Dashboard() {
         const password = prompt('Enter the password for this backup:')
         if (password) {
           const success = await importVault(text, password)
-          if (!success) {
-            alert('Import failed. Please check the password and try again.')
-          }
+          if (!success) alert('Import failed. Please check the password and try again.')
         }
       }
     }
@@ -160,26 +156,10 @@ export function Dashboard() {
       <main className="container mx-auto px-4 py-6">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <StatCard
-            label="Total Keys"
-            value={keys.length}
-            icon={<Key className="w-4 h-4" />}
-          />
-          <StatCard
-            label="Private Keys"
-            value={keys.filter(k => k.type === 'private_key').length}
-            icon={<Shield className="w-4 h-4" />}
-          />
-          <StatCard
-            label="Addresses"
-            value={keys.filter(k => k.type === 'address').length}
-            icon={<Key className="w-4 h-4" />}
-          />
-          <StatCard
-            label="Seed Phrases"
-            value={keys.filter(k => k.type === 'seed_phrase').length}
-            icon={<Key className="w-4 h-4" />}
-          />
+          <StatCard label="Total Keys" value={keys.length} icon={<Key className="w-4 h-4" />} />
+          <StatCard label="Private Keys" value={keys.filter(k => k.type === 'private_key').length} icon={<Shield className="w-4 h-4" />} />
+          <StatCard label="Addresses" value={keys.filter(k => k.type === 'address').length} icon={<Key className="w-4 h-4" />} />
+          <StatCard label="Seed Phrases" value={keys.filter(k => k.type === 'seed_phrase').length} icon={<Key className="w-4 h-4" />} />
         </div>
 
         {/* Search and Filter Bar */}
@@ -193,7 +173,6 @@ export function Dashboard() {
               className="pl-10"
             />
           </div>
-
           <div className="flex gap-3">
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-[160px]">
@@ -203,13 +182,10 @@ export function Dashboard() {
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
                 {KEY_TYPES.map(type => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
+                  <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-
             <Button onClick={() => setIsAddingKey(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add Key
@@ -280,15 +256,7 @@ export function Dashboard() {
   )
 }
 
-function StatCard({
-  label,
-  value,
-  icon
-}: {
-  label: string
-  value: number
-  icon: React.ReactNode
-}) {
+function StatCard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
     <div className="p-4 rounded-xl border border-border bg-card">
       <div className="flex items-center gap-2 text-muted-foreground mb-2">

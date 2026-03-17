@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useVault } from '@/lib/vault-context'
+import { useGoogleAuth } from '@/lib/google-auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -33,6 +34,7 @@ import {
   Eye,
   EyeOff,
   Smartphone,
+  LogOut,
 } from 'lucide-react'
 import { TotpSetup } from '@/components/auth/totp-setup'
 
@@ -49,8 +51,10 @@ export function Settings({ onClose }: SettingsProps) {
     enableTotp,
     disableTotp,
     deleteVault,
-    error
+    error,
   } = useVault()
+
+  const { user, signOut } = useGoogleAuth()
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -68,11 +72,9 @@ export function Settings({ onClose }: SettingsProps) {
   async function handlePasswordChange(e: React.FormEvent) {
     e.preventDefault()
     if (newPassword !== confirmPassword) return
-
     setIsChangingPassword(true)
     const success = await changePassword(currentPassword, newPassword)
     setIsChangingPassword(false)
-
     if (success) {
       setPasswordChangeSuccess(true)
       setCurrentPassword('')
@@ -87,7 +89,6 @@ export function Settings({ onClose }: SettingsProps) {
     setIsTogglingTotp(true)
     const secret = await enableTotp(totpPassword)
     setIsTogglingTotp(false)
-
     if (secret) {
       setNewTotpSecret(secret)
       setTotpPassword('')
@@ -101,7 +102,6 @@ export function Settings({ onClose }: SettingsProps) {
     setIsTogglingTotp(true)
     const success = await disableTotp(totpPassword, totpCode)
     setIsTogglingTotp(false)
-
     if (success) {
       setTotpPassword('')
       setTotpCode('')
@@ -113,17 +113,15 @@ export function Settings({ onClose }: SettingsProps) {
   if (newTotpSecret) {
     return (
       <div className="py-6">
-        <TotpSetup
-          secret={newTotpSecret}
-          onComplete={() => setNewTotpSecret(null)}
-        />
+        <TotpSetup secret={newTotpSecret} onComplete={() => setNewTotpSecret(null)} />
       </div>
     )
   }
 
   return (
     <div className="py-6 space-y-8">
-      {/* Auto-Lock Settings */}
+
+      {/* Auto-Lock */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-muted-foreground" />
@@ -180,7 +178,6 @@ export function Settings({ onClose }: SettingsProps) {
               onChange={(e) => setTotpPassword(e.target.value)}
               placeholder="Enter your password"
             />
-
             {authState.hasTotpEnabled && (
               <Input
                 type="text"
@@ -193,14 +190,12 @@ export function Settings({ onClose }: SettingsProps) {
                 className="font-mono"
               />
             )}
-
             {totpError && (
               <div className="flex items-center gap-2 text-destructive text-sm">
                 <AlertCircle className="w-4 h-4" />
                 {totpError}
               </div>
             )}
-
             <Button
               variant={authState.hasTotpEnabled ? 'outline' : 'default'}
               className="w-full"
@@ -245,7 +240,6 @@ export function Settings({ onClose }: SettingsProps) {
               </button>
             </div>
           </div>
-
           <div className="space-y-2">
             <Label>New Password</Label>
             <Input
@@ -255,7 +249,6 @@ export function Settings({ onClose }: SettingsProps) {
               placeholder="Enter new password"
             />
           </div>
-
           <div className="space-y-2">
             <Label>Confirm New Password</Label>
             <Input
@@ -265,21 +258,18 @@ export function Settings({ onClose }: SettingsProps) {
               placeholder="Confirm new password"
             />
           </div>
-
           {error && (
             <div className="flex items-center gap-2 text-destructive text-sm">
               <AlertCircle className="w-4 h-4" />
               {error}
             </div>
           )}
-
           {passwordChangeSuccess && (
             <div className="flex items-center gap-2 text-emerald-500 text-sm">
               <Check className="w-4 h-4" />
               Password changed successfully
             </div>
           )}
-
           <Button
             type="submit"
             variant="outline"
@@ -292,6 +282,43 @@ export function Settings({ onClose }: SettingsProps) {
       </div>
 
       <Separator />
+
+      {/* Google Account */}
+      {user && (
+        <>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <LogOut className="w-4 h-4 text-muted-foreground" />
+              <h3 className="font-medium">Google Account</h3>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={user.picture}
+                alt=""
+                className="w-9 h-9 rounded-full shrink-0"
+                referrerPolicy="no-referrer"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{user.name}</p>
+                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => { signOut(); onClose() }}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign out of Google
+            </Button>
+          </div>
+
+          <Separator />
+        </>
+      )}
 
       {/* Danger Zone */}
       <div className="space-y-4">
@@ -310,17 +337,15 @@ export function Settings({ onClose }: SettingsProps) {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Vault</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. All your stored keys and data will be permanently deleted.
-                Make sure you have backed up any important information before proceeding.
+                This action cannot be undone. All your stored keys and data will be permanently
+                deleted from your Google Drive. Make sure you have backed up any important
+                information before proceeding.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => {
-                  deleteVault()
-                  onClose()
-                }}
+                onClick={() => { deleteVault(); onClose() }}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Delete Vault

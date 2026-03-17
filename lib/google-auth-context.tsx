@@ -42,7 +42,7 @@ export function useGoogleAuth() {
 
 // ─── GIS loader ──────────────────────────────────────────────────────────────
 
-const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? '527017263396-po264cp3994t0mqbbtij59hod4vorsbp.apps.googleusercontent.com'
+const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ''
 const SCOPES = [
   'openid',
   'email',
